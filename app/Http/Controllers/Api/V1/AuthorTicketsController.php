@@ -19,10 +19,10 @@ class AuthorTicketsController extends ApiController
 {
     protected $policyClass = TicketPolicy::class;
 
-    public function index($author_id, TicketFilter $filters)
+    public function index(User $author, TicketFilter $filters)
     {
         return TicketResource::collection(
-            Ticket::where('user_id', $author_id)
+            Ticket::where('user_id', $author->id)
                 ->filter($filters)
                 ->paginate());
     }
@@ -30,72 +30,46 @@ class AuthorTicketsController extends ApiController
     /**
      * Store a newly created resource in storage.
      */
-    public function store(StoreTicketRequest $request, $author_id)
+    public function store(StoreTicketRequest $request, User $author)
     {
         if ($this->isAble('store', Ticket::class)) {
             return new TicketResource(Ticket::create($request->mappedAttributes([
-                'author' => 'user_id'
+                'author' => $author->id
             ])));
         }
 
-        return $this->error('You are not authorized to create that resource', 403);
+        return $this->notAuthorized('You are not authorized to create that resource');
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($author_id, $ticket_id)
+    public function destroy($author_id, Ticket $ticket)
     {
-        try {
-            $ticket = Ticket::where('id', $ticket_id)
-                ->where('user_id', $author_id)
-                ->firstOrFail();
-
-            if ($this->isAble('delete', $ticket)) {
-                $ticket->delete();
-                return $this->ok('Ticket successfully deleted');
-            }
-            return $this->error('You are not authorized to delete that resource', 403);
-        } catch (ModelNotFoundException $exception) {
-            return $this->error('Ticket cannot found.', 404);
+        if ($this->isAble('delete', $ticket)) {
+            $ticket->delete();
+            return $this->ok('Ticket successfully deleted');
         }
+        return $this->notAuthorized('You are not authorized to delete that resource');
     }
 
-    public function replace(ReplaceTicketRequest $request, $author_id, $ticket_id)
+    public function replace(ReplaceTicketRequest $request, $author_id, Ticket $ticket)
     {
-        try {
-            $ticket = Ticket::where('id', $ticket_id)
-                ->where('user_id', $author_id)
-                ->firstOrFail();
-
-            if ($this->isAble('replace', $ticket)) {
-                $ticket->update($request->mappedAttributes());
-                return new TicketResource($ticket);
-            }
-
-            return $this->error('You are not authorized to update that resource', 403);
-
-        } catch (ModelNotFoundException $exception) {
-            return $this->error('Ticket cannot be found.', 404);
+        if ($this->isAble('replace', $ticket)) {
+            $ticket->update($request->mappedAttributes());
+            return new TicketResource($ticket);
         }
+
+        return $this->notAuthorized('You are not authorized to update that resource');
     }
 
-    public function update(UpdateTicketRequest $request, $author_id, $ticket_id)
+    public function update(UpdateTicketRequest $request, $author_id, Ticket $ticket)
     {
-        try {
-            $ticket = Ticket::where('id', $ticket_id)
-                ->where('user_id', $author_id)
-                ->firstOrFail();
-
-            if ($this->isAble('update', $ticket)) {
-                $ticket->update($request->mappedAttributes());
-                return new TicketResource($ticket);
-            }
-
-            return $this->error('You are not authorized to update that resource', 403);
-
-        } catch (ModelNotFoundException $exception) {
-            return $this->error('Ticket cannot be found.', 404);
+        if ($this->isAble('update', $ticket)) {
+            $ticket->update($request->mappedAttributes());
+            return new TicketResource($ticket);
         }
+
+        return $this->notAuthorized('You are not authorized to update that resource');
     }
 }
